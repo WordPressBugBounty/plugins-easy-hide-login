@@ -2,8 +2,8 @@
 Contributors: WebFactory
 Tags: hide login, wp login, login, hide my wp, custom login
 Requires at least: 5.0
-Tested up to: 6.6
-Stable tag: 1.3
+Tested up to: 6.7
+Stable tag: 1.4
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -53,6 +53,10 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 
 
 == Changelog ==
+= 1.4 =
+* 2025/01/08
+* reset password bug fix
+
 = 1.3 =
 * 2024/06/30
 * minor security fixes

@@ -5,7 +5,7 @@
   Author: WebFactory Ltd
   Author URI: https://www.webfactoryltd.com/
   Text Domain: easy-hide-login
-  Version: 1.3
+  Version: 1.4
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2, as
@@ -54,11 +54,45 @@ class Easy_Hide_Login
       if (!empty($options['slug'])) {
         add_action('login_init', array(__CLASS__, 'login_head'), 1);
         add_action('login_form', array(__CLASS__, 'hidden_field'));
+        
         add_filter('lostpassword_url',  array(__CLASS__, 'lostpassword'), 10, 0);
         add_filter('lostpassword_redirect', array(__CLASS__, 'lostpassword_redirect'), 100, 1);
+        add_filter('site_url',  array(__CLASS__, 'site_url'), 10, 4);
       }
     }
   } // init
+
+  static function site_url($url, $path, $scheme, $blog_id){
+    $options = self::get_options();
+    $parsedUrl = parse_url($url);
+
+    if ( strpos( $url, 'wp-login.php' ) === false || empty($options['slug']) ){
+        return $url;
+    }
+
+    if (!isset($parsedUrl['query'])) {
+        $queryParams = [];
+    } else {
+        parse_str($parsedUrl['query'], $queryParams);
+    }
+
+    if (!array_key_exists($options['slug'], $queryParams)) {
+        $queryParams[$options['slug']] = 1;
+    }
+
+    $queryString = http_build_query($queryParams);
+
+    $scheme   = isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : '';
+    $host     = isset($parsedUrl['host']) ? $parsedUrl['host'] : '';
+    $port     = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+    $user     = isset($parsedUrl['user']) ? $parsedUrl['user'] : '';
+    $pass     = isset($parsedUrl['pass']) ? ':' . $parsedUrl['pass']  : '';
+    $pass     = ($user || $pass) ? "$pass@" : '';
+    $path     = isset($parsedUrl['path']) ? $parsedUrl['path'] : '';
+    $fragment = isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '';
+
+    return $scheme . $user . $pass . $host . $port . $path . '?' . $queryString . $fragment;
+  }
 
   // add settings link to plugins page
   static function plugin_action_links($links)
