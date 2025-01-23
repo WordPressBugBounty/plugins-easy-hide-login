@@ -5,7 +5,7 @@
   Author: WebFactory Ltd
   Author URI: https://www.webfactoryltd.com/
   Text Domain: easy-hide-login
-  Version: 1.4
+  Version: 1.5
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2, as
@@ -238,8 +238,8 @@ class Easy_Hide_Login
       $change = true;
     }
 
-    if (isset($_POST['submit'])) {
-      if (!isset($_POST['easyhidelogin_update_admin_options_nonce']) || !wp_verify_nonce($_POST['easyhidelogin_update_admin_options_nonce'], 'easyhidelogin_update_admin_options')) {
+    if (isset($_POST['submit']) && isset($_POST['easyhidelogin_update_admin_options_nonce'])) {
+      if (!wp_verify_nonce($_POST['easyhidelogin_update_admin_options_nonce'], 'easyhidelogin_update_admin_options')) {
         echo '<div id="message" class="updated fade">
                     <p><strong>' . esc_html__('Sorry, your nonce did not verify.', 'easy-hide-login') . '</strong></p>
                 </div>';
