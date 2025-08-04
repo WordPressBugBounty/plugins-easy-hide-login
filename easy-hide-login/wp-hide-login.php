@@ -5,7 +5,7 @@
   Author: WebFactory Ltd
   Author URI: https://www.webfactoryltd.com/
   Text Domain: easy-hide-login
-  Version: 1.5
+  Version: 1.6
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2, as
@@ -36,8 +36,8 @@ class Easy_Hide_Login
   {
     self::$version = self::get_plugin_version();
     $options = self::load_options();
-
-    if (!empty($options['slug']) && parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) == $options['slug']) {
+    $request_url = sanitize_url(wp_unslash($_SERVER['REQUEST_URI'] ?? ''));
+    if (!empty($options['slug']) && wp_parse_url($request_url, PHP_URL_QUERY) == $options['slug']) {
       wp_safe_redirect(site_url("wp-login.php?" . $options['slug'] . "&redirect=false"));
       exit();
     }
@@ -64,7 +64,7 @@ class Easy_Hide_Login
 
   static function site_url($url, $path, $scheme, $blog_id){
     $options = self::get_options();
-    $parsedUrl = parse_url($url);
+    $parsedUrl = wp_parse_url($url);
 
     if ( strpos( $url, 'wp-login.php' ) === false || empty($options['slug']) ){
         return $url;
@@ -109,14 +109,16 @@ class Easy_Hide_Login
   static function login_head()
   {
     $options = self::get_options();
-
+    //phpcs:ignore because page can be loaded without nonce present
     if (isset($_GET['action']) && isset($_GET['key'])) return;
-    if (isset($_GET['action']) && sanitize_text_field($_GET['action']) == 'resetpass') return;
-    if (isset($_GET['action']) && sanitize_text_field($_GET['action']) == 'rp') return;
+    if (isset($_GET['action']) && sanitize_text_field($_GET['action']) == 'resetpass') return; //phpcs:ignore
+    if (isset($_GET['action']) && sanitize_text_field($_GET['action']) == 'rp') return; //phpcs:ignore
+ 
+    if (isset($_POST['redirect_slug']) && sanitize_text_field($_POST['redirect_slug']) == $options['slug']) return false; //phpcs:ignore
 
-    if (isset($_POST['redirect_slug']) && sanitize_text_field($_POST['redirect_slug']) == $options['slug']) return false;
+    $request_url = sanitize_url(wp_unslash($_SERVER['REQUEST_URI'] ?? ''));
 
-    if (strpos($_SERVER['REQUEST_URI'], 'action=logout') !== false) {
+    if (strpos($request_url, 'action=logout') !== false) { 
       check_admin_referer('log-out');
 
       wp_logout();
@@ -124,8 +126,8 @@ class Easy_Hide_Login
       die;
     }
 
-    if ((strpos($_SERVER['REQUEST_URI'], $options['slug']) === false) &&
-      (strpos($_SERVER['REQUEST_URI'], 'wp-login.php') !== false)
+    if ((strpos($request_url, $options['slug']) === false) &&
+      (strpos($request_url, 'wp-login.php') !== false)
     ) {
       wp_safe_redirect(home_url('404'), 302);
       exit();
@@ -147,7 +149,7 @@ class Easy_Hide_Login
   static function hidden_field()
   {
     $options = self::get_options();
-    echo '<input type="hidden" name="redirect_slug" value="' . esc_attr__($options['slug']) . '" />';
+    echo '<input type="hidden" name="redirect_slug" value="' . esc_attr($options['slug']) . '" />';
   } // hidden_field
 
   static function admin_enqueue_scripts($hook)
@@ -163,7 +165,7 @@ class Easy_Hide_Login
       wp_enqueue_script('jquery-ui-dialog');
 
       $js_localize = array(
-        'wp301_install_url' => add_query_arg(array('action' => 'easy_hide_login_install_wp301', '_wpnonce' => wp_create_nonce('install_wp301'), 'rnd' => rand()), admin_url('admin.php')),
+        'wp301_install_url' => add_query_arg(array('action' => 'easy_hide_login_install_wp301', '_wpnonce' => wp_create_nonce('install_wp301'), 'rnd' => wp_rand()), admin_url('admin.php')),
         'site_url' => site_url()
       );
 
@@ -239,13 +241,13 @@ class Easy_Hide_Login
     }
 
     if (isset($_POST['submit']) && isset($_POST['easyhidelogin_update_admin_options_nonce'])) {
-      if (!wp_verify_nonce($_POST['easyhidelogin_update_admin_options_nonce'], 'easyhidelogin_update_admin_options')) {
+      if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['easyhidelogin_update_admin_options_nonce'])), 'easyhidelogin_update_admin_options')) {
         echo '<div id="message" class="updated fade">
                     <p><strong>' . esc_html__('Sorry, your nonce did not verify.', 'easy-hide-login') . '</strong></p>
                 </div>';
       } else {
         if (isset($_POST['slug'])) {
-          $options['options']['slug'] = sanitize_text_field($_POST['slug']);
+          $options['options']['slug'] = sanitize_text_field(wp_unslash($_POST['slug']));
         }
 
         $change = true;
@@ -293,8 +295,8 @@ class Easy_Hide_Login
   static function admin_menu()
   {
     add_options_page(
-      esc_html__('Easy Hide Login'),
-      esc_html__('Easy Hide Login'),
+      'Easy Hide Login',
+      'Easy Hide Login',
       'manage_options',
       'easy-hide-login',
       array(__CLASS__, 'options_page')
@@ -341,7 +343,7 @@ class Easy_Hide_Login
   static function options_page()
   {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'easy-hide-login'));
     }
 
     $options = self::get_options();
@@ -355,7 +357,7 @@ class Easy_Hide_Login
     echo '<table class="form-table">';
     echo '<tr>';
     echo '<td style="width:200px"><label for="login_slug">Slug Text:</label></td>';
-    echo '<td><input type="text" id="login_slug" value="' . esc_attr__($options['slug']) . '" name="slug"></td>';
+    echo '<td><input type="text" id="login_slug" value="' . esc_attr($options['slug']) . '" name="slug"></td>';
     echo '</tr>';
     echo '<tr>';
     echo '<td><label>Login url:</label></td>';
